@@ -26,8 +26,19 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+// Vercel auto-populates VERCEL_PROJECT_PRODUCTION_URL on deploy; falls back to
+// the per-deployment VERCEL_URL, then to localhost in dev. Override with
+// NEXT_PUBLIC_SITE_URL once a custom domain is wired up.
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000");
+
 export const metadata: Metadata = {
-  metadataBase: new URL("http://localhost:3000"),
+  metadataBase: new URL(siteUrl),
   title: {
     default: "VIBEWALL — background generator",
     template: "%s · VIBEWALL",
