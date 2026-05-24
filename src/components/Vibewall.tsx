@@ -148,9 +148,14 @@ function FormatPicker({
 
   return (
     <div className="format-picker" ref={ref}>
-      <button className="btn ghost fp-btn" onClick={() => setOpen((o) => !o)}>
+      <button
+        className="btn fp-btn"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={`Formato: ${format.name} ${format.w}×${format.h}`}
+        title={`${format.name} · ${format.w}×${format.h}`}
+      >
         <span className="fp-shape-mini" style={{ aspectRatio: format.w + " / " + format.h }} />
-        <span className="fp-btn-text">{format.name} · {format.w}×{format.h}</span>
+        <span className="fp-btn-text">Formato</span>
         <span className="fp-caret">▾</span>
       </button>
 
@@ -301,10 +306,6 @@ export default function Vibewall() {
     setDensity(0.3 + rng() * 0.5);
   }, []);
 
-  const reseed = useCallback(() => {
-    setSeed((s) => ((s * 7 + 13) % 9999) + 1);
-  }, []);
-
   const downloadAt = useCallback((f: Format) => {
     const node = document.querySelector("#export-stage svg") as SVGSVGElement | null;
     if (!node) return;
@@ -369,7 +370,6 @@ export default function Vibewall() {
           </div>
         </div>
         <div className="top-actions">
-          <button className="btn ghost" onClick={reseed}>↻ Reseed</button>
           <button className="btn" onClick={randomize}>⚡ Surprise me</button>
           <FormatPicker format={format} setFormat={setFormat} />
           <button className="btn primary" onClick={() => setExportOpen(true)}>↓ Export</button>
@@ -390,13 +390,11 @@ export default function Vibewall() {
             />
           </div>
           <div className="stage-caption">
-            <span>{PATTERNS[patternKey].label}</span>
+            <span className="caption-label">Formato</span>
             <span className="dot">·</span>
-            <span>{palette.name}</span>
+            <span>{format.name}</span>
             <span className="dot">·</span>
             <span>{format.w} × {format.h}</span>
-            <span className="dot">·</span>
-            <span>seed {seed}</span>
           </div>
         </section>
 
@@ -455,7 +453,13 @@ export default function Vibewall() {
                 onChange={(e) => setSeed(parseInt(e.target.value) || 0)}
                 className="seed-input"
               />
-              <button className="btn ghost tiny" onClick={reseed}>↻</button>
+              <button
+                className="btn ghost tiny"
+                title="Random seed"
+                onClick={() => setSeed(Math.floor(Math.random() * 9999) + 1)}
+              >
+                ↻
+              </button>
             </div>
           </section>
 
