@@ -60,11 +60,18 @@ function PatternThumb({
 }: { patternKey: string; palette: Palette; active: boolean; onClick: () => void }) {
   const Pattern = PATTERNS[patternKey].render;
   return (
-    <button className={"thumb " + (active ? "active" : "")} onClick={onClick}>
-      <div className="thumb-clip">
+    <button
+      onClick={onClick}
+      className={`relative bg-bg-3 border-[1.5px] rounded-[10px] p-2 cursor-pointer transition-[border-color,transform] duration-100 flex flex-col gap-2 font-ui hover:border-[#555] hover:-translate-y-px ${
+        active ? "border-accent shadow-[0_0_0_1.5px_var(--color-accent)]" : "border-line"
+      }`}
+    >
+      <div className="aspect-square rounded-md overflow-hidden bg-black [&_svg]:w-full [&_svg]:h-full [&_svg]:block">
         <Pattern palette={palette.colors} seed={42} warp={0.5} density={0.5} />
       </div>
-      <span className="thumb-label">{PATTERNS[patternKey].label}</span>
+      <span className="font-hand text-base text-center text-ink pb-0.5">
+        {PATTERNS[patternKey].label}
+      </span>
     </button>
   );
 }
@@ -73,14 +80,14 @@ function ColorPicker({
   label, value, onChange,
 }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <div className="cp-row">
-      <label className="cp-label">{label}</label>
-      <div className="cp-controls">
+    <div className="flex flex-col gap-1.5">
+      <label className="font-mono text-[10px] uppercase tracking-[1.2px] text-ink-dim">{label}</label>
+      <div className="flex items-center gap-1.5">
         <input
           type="color"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="cp-color"
+          className="cp-color w-8 h-8 bg-none border-[1.5px] border-line rounded-lg p-0 cursor-pointer"
         />
         {/* key={value} remounts the input on external value change so the
             uncontrolled defaultValue resets — avoids syncing prop→state in an effect. */}
@@ -91,7 +98,7 @@ function ColorPicker({
           onChange={(e) => {
             if (/^#[0-9a-f]{6}$/i.test(e.target.value)) onChange(e.target.value);
           }}
-          className="cp-hex"
+          className="flex-1 min-w-0 bg-bg-2 border border-line text-ink font-mono text-xs px-2 py-1.5 rounded-md outline-none uppercase focus:border-accent"
         />
       </div>
     </div>
@@ -106,14 +113,15 @@ function Slider({
 }) {
   const display = format ? format(value) : Math.round(value * 100) + "";
   return (
-    <div className="slider-row">
-      <div className="slider-head">
+    <div className="mb-4">
+      <div className="flex justify-between mb-2 font-mono text-[11px] uppercase tracking-[1.2px] text-ink-dim">
         <span>{label}</span>
-        <span className="slider-val">{display}</span>
+        <span className="text-ink">{display}</span>
       </div>
       <input
         type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="w-full h-1 rounded outline-none"
       />
     </div>
   );
@@ -147,51 +155,63 @@ function FormatPicker({
   };
 
   return (
-    <div className="format-picker" ref={ref}>
+    <div className="format-picker relative flex items-center" ref={ref}>
       <button
-        className="btn fp-btn"
+        className="btn flex items-center gap-2"
         onClick={() => setOpen((o) => !o)}
         aria-label={`Formato: ${format.name} ${format.w}×${format.h}`}
         title={`${format.name} · ${format.w}×${format.h}`}
       >
-        <span className="fp-shape-mini" style={{ aspectRatio: format.w + " / " + format.h }} />
-        <span className="fp-btn-text">Formato</span>
-        <span className="fp-caret">▾</span>
+        <span
+          className="inline-block bg-gradient-to-br from-accent to-accent-2 rounded-sm h-4 w-[11px] shrink-0"
+          style={{ aspectRatio: format.w + " / " + format.h }}
+        />
+        <span className="text-[13px] font-semibold">Formato</span>
+        <span className="text-ink-dim text-[11px] ml-0.5">▾</span>
       </button>
 
       {open && (
-        <div className="fp-menu">
-          <div className="fp-grid">
+        <div className="absolute top-[calc(100%+8px)] right-0 bg-bg-2 border border-line rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 min-w-[560px] max-w-[90vw] max-[560px]:min-w-0 max-[560px]:max-w-[calc(100vw-28px)]">
+          <div className="grid grid-cols-4 gap-2 mb-3 max-[560px]:grid-cols-2">
             {FORMATS.map((f, i) => (
               <button
                 key={f.id}
-                className={"fp-item " + (idx === i ? "active" : "")}
                 onClick={() => { setFormat(f); setOpen(false); }}
+                className={`bg-bg-3 border-[1.5px] rounded-lg pt-2.5 px-2 pb-2 cursor-pointer flex flex-col items-center gap-2 transition-colors duration-100 hover:border-[#555] ${
+                  idx === i ? "border-accent shadow-[0_0_0_1.5px_var(--color-accent)]" : "border-line"
+                }`}
               >
-                <div className="fp-shape-wrap">
-                  <div className="fp-shape" style={{ aspectRatio: f.w + " / " + f.h }} />
+                <div className="h-12 grid place-items-center w-full">
+                  <div
+                    className="bg-gradient-to-br from-[#3a3a44] to-[#22222a] rounded-[3px] max-h-12 max-w-full h-full"
+                    style={{ aspectRatio: f.w + " / " + f.h }}
+                  />
                 </div>
-                <div className="fp-item-meta">
-                  <span className="fp-item-name">{f.name}</span>
-                  <span className="fp-item-dims">{f.w} × {f.h}</span>
+                <div className="flex flex-col items-center gap-0.5 font-ui">
+                  <span className="text-[11px] font-semibold text-ink">{f.name}</span>
+                  <span className="font-mono text-[9.5px] text-ink-dim tracking-[0.4px]">{f.w} × {f.h}</span>
                 </div>
               </button>
             ))}
           </div>
-          <div className={"fp-custom-row " + (isCustom ? "active" : "")}>
-            <span className="fp-custom-tag">Custom</span>
+          <div className={`flex items-center gap-2 px-3 py-2.5 bg-bg-3 border-[1.5px] rounded-lg ${
+            isCustom ? "border-accent border-solid shadow-[0_0_0_1.5px_var(--color-accent)]" : "border-line border-dashed"
+          }`}>
+            <span className="font-hand text-base mr-1">Custom</span>
             <input
               type="number" min={64} max={8000} step={1}
               value={isCustom ? format.w : 1080}
               onChange={(e) => updateCustom("w", e.target.value)}
+              className="no-spin w-20 bg-bg-2 border border-line text-ink font-mono text-xs px-2 py-1.5 rounded-md outline-none text-center focus:border-accent"
             />
-            <span className="fp-sep">×</span>
+            <span className="font-mono text-xs text-ink-dim">×</span>
             <input
               type="number" min={64} max={8000} step={1}
               value={isCustom ? format.h : 1920}
               onChange={(e) => updateCustom("h", e.target.value)}
+              className="no-spin w-20 bg-bg-2 border border-line text-ink font-mono text-xs px-2 py-1.5 rounded-md outline-none text-center focus:border-accent"
             />
-            <span className="fp-sep">px</span>
+            <span className="font-mono text-xs text-ink-dim">px</span>
           </div>
         </div>
       )}
@@ -213,34 +233,45 @@ function ExportModal({
     onClose();
   };
   return (
-    <div className="modal-back" onClick={onClose}>
-      <div className="modal-card export-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-head">
-          <h2>Export</h2>
-          <button className="x-btn" onClick={onClose}>×</button>
-        </div>
-        <div className="export-summary">
-          <span className="summary-label">Size</span>
-          <span className="summary-value">{format.name} · {format.w} × {format.h}</span>
-        </div>
-        <div className="modal-section-label">File type</div>
-        <div className="filetype-row">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 bg-[rgba(5,5,8,0.72)] backdrop-blur-[8px] grid place-items-center z-[100] animate-[fadeIn_140ms_ease]"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-bg-2 border border-line rounded-[18px] p-6 w-[min(520px,calc(100vw-40px))] max-h-[calc(100vh-80px)] overflow-y-auto shadow-[0_30px_80px_rgba(0,0,0,0.5)]"
+      >
+        <div className="flex justify-between items-center mb-[18px]">
+          <h2 className="font-hand text-[28px] m-0 leading-none">Export</h2>
           <button
-            className={"filetype-card " + (fileType === "png" ? "active" : "")}
-            onClick={() => setFileType("png")}
+            onClick={onClose}
+            className="w-9 h-9 bg-bg-3 border border-line text-ink rounded-full text-[22px] cursor-pointer grid place-items-center p-0 leading-none hover:bg-[#2a2a33]"
           >
-            <span className="ft-name">PNG</span>
-            <span className="ft-desc">Raster image — ready for upload</span>
-          </button>
-          <button
-            className={"filetype-card " + (fileType === "svg" ? "active" : "")}
-            onClick={() => setFileType("svg")}
-          >
-            <span className="ft-name">SVG</span>
-            <span className="ft-desc">Vector, infinite zoom</span>
+            ×
           </button>
         </div>
-        <div className="modal-foot">
+        <div className="flex justify-between items-center px-3.5 py-3 bg-bg-3 border border-line rounded-[10px] mb-2">
+          <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-ink-dim">Size</span>
+          <span className="font-ui text-[13px] font-semibold text-ink">{format.name} · {format.w} × {format.h}</span>
+        </div>
+        <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-ink-dim mb-2.5 mt-1">File type</div>
+        <div className="grid grid-cols-2 gap-2.5 mb-[18px]">
+          {(["png", "svg"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setFileType(t)}
+              className={`bg-bg-3 border-[1.5px] rounded-[10px] px-4 py-3.5 cursor-pointer flex flex-col items-start gap-1 transition-colors duration-100 text-left font-ui hover:border-[#555] ${
+                fileType === t ? "border-accent shadow-[0_0_0_1.5px_var(--color-accent)]" : "border-line"
+              }`}
+            >
+              <span className="text-lg font-bold text-ink font-hand tracking-[0.5px]">{t.toUpperCase()}</span>
+              <span className="text-[11px] text-ink-dim">
+                {t === "png" ? "Raster image — ready for upload" : "Vector, infinite zoom"}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="flex justify-between items-center gap-2.5">
           <button className="btn ghost" onClick={onClose}>Cancel</button>
           <button className="btn primary big" onClick={handleDownload}>↓ Download {fileType.toUpperCase()}</button>
         </div>
@@ -355,30 +386,30 @@ export default function Vibewall() {
   const PatternRender = PATTERNS[patternKey].render;
 
   return (
-    <div className="app">
-      <header className="topbar">
-        <div className="brand">
-          <div className="brand-mark">
+    <div className="h-screen flex flex-col overflow-hidden">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-line bg-gradient-to-b from-[#111114] to-bg z-10 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-accent rounded-[14px] grid place-items-center">
             <svg viewBox="0 0 40 40" width="32" height="32">
               <path d={starburstPath(20, 20, 17, 13, 11, 1)} fill="#fff" />
               <circle cx="20" cy="20" r="4" fill="#0a0a0a" />
             </svg>
           </div>
           <div>
-            <h1>VIBEWALL</h1>
-            <p>Background generator</p>
+            <h1 className="font-hand text-[28px] tracking-[0.5px] m-0 leading-none">VIBEWALL</h1>
+            <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-ink-dim mt-1 m-0">Background generator</p>
           </div>
         </div>
-        <div className="top-actions">
+        <div className="top-actions flex gap-2 items-center">
           <button className="btn" onClick={randomize}>⚡ Surprise me</button>
           <FormatPicker format={format} setFormat={setFormat} />
           <button className="btn primary" onClick={() => setExportOpen(true)}>↓ Export</button>
         </div>
       </header>
 
-      <main className="grid">
-        <section className="stage">
-          <div className="preview-wrapper">
+      <main className="app-grid">
+        <section className="stage flex flex-col items-stretch p-0 gap-4 h-full min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 [container-type:size] flex items-center justify-center">
             <Preview
               patternKey={patternKey}
               palette={palette}
@@ -389,11 +420,11 @@ export default function Vibewall() {
               extras={extras}
             />
           </div>
-          <div className="stage-caption">
-            <span className="caption-label">Formato</span>
-            <span className="dot">·</span>
+          <div className="self-center flex gap-2.5 items-center font-mono text-[10px] tracking-[1.5px] uppercase text-ink-dim px-3 py-1.5 bg-bg-2 border border-line rounded-full whitespace-nowrap shrink-0">
+            <span className="text-ink font-semibold">Formato</span>
+            <span className="text-[#444]">·</span>
             <span>{format.name}</span>
-            <span className="dot">·</span>
+            <span className="text-[#444]">·</span>
             <span>{format.w} × {format.h}</span>
           </div>
         </section>
@@ -404,16 +435,18 @@ export default function Vibewall() {
         <div className="controls" data-mobile-modal={mobileModal ?? ""}>
           {/* Mobile-only modal backdrop — tap to close */}
           <div
-            className="mobile-backdrop"
             onClick={() => setMobileModal(null)}
             aria-hidden="true"
+            className={`hidden max-[940px]:block fixed inset-0 bg-[rgba(5,5,8,0.6)] backdrop-blur-[6px] z-[80] transition-opacity duration-200 ${
+              mobileModal ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+            }`}
           />
 
-          <section className="panel" data-panel="pattern">
+          <section className="bg-bg-2 border border-line rounded-2xl p-5 h-full overflow-y-auto min-h-0" data-panel="pattern">
             <div className="panel-head">
-              <h2>Pattern</h2>
+              <h2 className="font-hand text-[22px] font-bold m-0 tracking-[0.3px]">Pattern</h2>
             </div>
-            <div className="thumbs">
+            <div className="grid grid-cols-2 gap-2">
               {PATTERN_KEYS.map((k) => (
                 <PatternThumb
                   key={k}
@@ -426,9 +459,9 @@ export default function Vibewall() {
             </div>
           </section>
 
-          <section className="panel" data-panel="sliders">
+          <section className="bg-bg-2 border border-line rounded-2xl p-5 h-full overflow-y-auto min-h-0" data-panel="sliders">
             <div className="panel-head">
-              <h2>Sliders</h2>
+              <h2 className="font-hand text-[22px] font-bold m-0 tracking-[0.3px]">Sliders</h2>
             </div>
             <Slider label="Warp" value={warp} onChange={setWarp} />
             <Slider label="Density" value={density} onChange={setDensity} />
@@ -446,15 +479,15 @@ export default function Vibewall() {
               />
             ))}
 
-            <div className="seed-row">
-              <span className="seed-label">Seed</span>
+            <div className="flex gap-2 items-center mt-3">
+              <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-ink-dim shrink-0">Seed</span>
               <input
                 type="number" value={seed}
                 onChange={(e) => setSeed(parseInt(e.target.value) || 0)}
-                className="seed-input"
+                className="no-spin flex-1 min-w-0 bg-bg-3 border border-line text-ink font-mono text-xs px-2 py-1.5 rounded-[7px] outline-none focus:border-accent"
               />
               <button
-                className="btn ghost tiny"
+                className="btn ghost tiny shrink-0"
                 title="Random seed"
                 onClick={() => setSeed(Math.floor(Math.random() * 9999) + 1)}
               >
@@ -463,56 +496,55 @@ export default function Vibewall() {
             </div>
           </section>
 
-          <section className="panel" data-panel="palette">
+          <section className="bg-bg-2 border border-line rounded-2xl p-5 h-full overflow-y-auto min-h-0" data-panel="palette">
             <div className="panel-head">
-              <h2>Palette</h2>
-              <div className="seg" role="tablist">
-                <button
-                  role="tab"
-                  aria-selected={paletteMode === "presets"}
-                  className={"seg-btn " + (paletteMode === "presets" ? "on" : "")}
-                  onClick={() => setPaletteMode("presets")}
-                >
-                  Presets
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={paletteMode === "custom"}
-                  className={"seg-btn " + (paletteMode === "custom" ? "on" : "")}
-                  onClick={() => setPaletteMode("custom")}
-                >
-                  Custom
-                </button>
+              <h2 className="font-hand text-[22px] font-bold m-0 tracking-[0.3px]">Palette</h2>
+              <div role="tablist" className="inline-flex bg-bg-3 border border-line rounded-lg p-[3px] gap-0.5">
+                {(["presets", "custom"] as const).map((m) => (
+                  <button
+                    key={m}
+                    role="tab"
+                    aria-selected={paletteMode === m}
+                    onClick={() => setPaletteMode(m)}
+                    className={`font-ui text-[11px] font-semibold tracking-[0.3px] px-2.5 py-[5px] border-0 rounded-md cursor-pointer transition-[background,color] duration-100 ${
+                      paletteMode === m ? "bg-accent text-white" : "bg-transparent text-ink-dim hover:text-ink"
+                    }`}
+                  >
+                    {m === "presets" ? "Presets" : "Custom"}
+                  </button>
+                ))}
               </div>
             </div>
 
             {paletteMode === "presets" ? (
-              <div className="palettes">
+              <div className="grid grid-cols-2 gap-2">
                 {PALETTES.map((p, i) => (
                   <button
                     key={p.id}
-                    className={"swatch " + (i === presetIdx ? "active" : "")}
                     onClick={() => setPresetIdx(i)}
                     title={p.name}
+                    className={`flex flex-col gap-2 border-[1.5px] rounded-[10px] cursor-pointer p-2 bg-bg-3 transition-colors duration-100 hover:border-[#555] ${
+                      i === presetIdx ? "border-accent shadow-[0_0_0_1.5px_var(--color-accent)]" : "border-line"
+                    }`}
                   >
-                    <div className="swatch-colors">
+                    <div className="grid grid-cols-2 h-12 rounded-md overflow-hidden">
                       <span style={{ background: p.colors[0] }} />
                       <span style={{ background: p.colors[1] }} />
                     </div>
-                    <span className="swatch-name">{p.name}</span>
+                    <span className="font-hand text-sm text-ink text-center leading-none pb-0.5">{p.name}</span>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="custom-pickers">
-                <div className="custom-preview">
+              <div className="flex flex-col gap-3 p-4 bg-bg-3 border border-dashed border-line rounded-xl">
+                <div className="grid grid-cols-2 h-16 rounded-[10px] overflow-hidden border-[1.5px] border-line">
                   <span style={{ background: customPalette.colors[0] }} />
                   <span style={{ background: customPalette.colors[1] }} />
                 </div>
                 <ColorPicker label="Primary"    value={customC1} onChange={setCustomC1} />
                 <ColorPicker label="Background" value={customC2} onChange={setCustomC2} />
                 <button
-                  className="btn ghost tiny full"
+                  className="btn ghost tiny w-full mt-1"
                   onClick={() => {
                     const a = customC1, b = customC2;
                     setCustomC1(b);
@@ -526,29 +558,36 @@ export default function Vibewall() {
           </section>
 
           {/* Mobile-only: format tab — render the size options inline (no dropdown). */}
-          <section className="panel mobile-only-panel" data-panel="format">
+          <section className="bg-bg-2 border border-line rounded-2xl p-5 h-full overflow-y-auto min-h-0 mobile-only-panel" data-panel="format">
             <div className="panel-head">
-              <h2>Format</h2>
+              <h2 className="font-hand text-[22px] font-bold m-0 tracking-[0.3px]">Format</h2>
             </div>
-            <div className="fp-grid mobile-fp-grid">
+            <div className="grid grid-cols-2 gap-2.5 mb-3">
               {FORMATS.map((f) => (
                 <button
                   key={f.id}
-                  className={"fp-item " + (format.id === f.id ? "active" : "")}
                   onClick={() => setFormat(f)}
+                  className={`bg-bg-3 border-[1.5px] rounded-lg pt-2.5 px-2 pb-2 cursor-pointer flex flex-col items-center gap-2 transition-colors duration-100 hover:border-[#555] ${
+                    format.id === f.id ? "border-accent shadow-[0_0_0_1.5px_var(--color-accent)]" : "border-line"
+                  }`}
                 >
-                  <div className="fp-shape-wrap">
-                    <div className="fp-shape" style={{ aspectRatio: f.w + " / " + f.h }} />
+                  <div className="h-12 grid place-items-center w-full">
+                    <div
+                      className="bg-gradient-to-br from-[#3a3a44] to-[#22222a] rounded-[3px] max-h-12 max-w-full h-full"
+                      style={{ aspectRatio: f.w + " / " + f.h }}
+                    />
                   </div>
-                  <div className="fp-item-meta">
-                    <span className="fp-item-name">{f.name}</span>
-                    <span className="fp-item-dims">{f.w} × {f.h}</span>
+                  <div className="flex flex-col items-center gap-0.5 font-ui">
+                    <span className="text-[11px] font-semibold text-ink">{f.name}</span>
+                    <span className="font-mono text-[9.5px] text-ink-dim tracking-[0.4px]">{f.w} × {f.h}</span>
                   </div>
                 </button>
               ))}
             </div>
-            <div className={"fp-custom-row " + (format.id === "custom" ? "active" : "")}>
-              <span className="fp-custom-tag">Custom</span>
+            <div className={`flex items-center gap-2 px-3 py-2.5 bg-bg-3 border-[1.5px] rounded-lg ${
+              format.id === "custom" ? "border-accent border-solid shadow-[0_0_0_1.5px_var(--color-accent)]" : "border-line border-dashed"
+            }`}>
+              <span className="font-hand text-base mr-1">Custom</span>
               <input
                 type="number" min={64} max={8000} step={1}
                 value={format.id === "custom" ? format.w : 1080}
@@ -561,8 +600,9 @@ export default function Vibewall() {
                     h: format.id === "custom" ? format.h : 1920,
                   });
                 }}
+                className="no-spin w-20 bg-bg-2 border border-line text-ink font-mono text-xs px-2 py-1.5 rounded-md outline-none text-center focus:border-accent"
               />
-              <span className="fp-sep">×</span>
+              <span className="font-mono text-xs text-ink-dim">×</span>
               <input
                 type="number" min={64} max={8000} step={1}
                 value={format.id === "custom" ? format.h : 1920}
@@ -575,47 +615,38 @@ export default function Vibewall() {
                     h: n,
                   });
                 }}
+                className="no-spin w-20 bg-bg-2 border border-line text-ink font-mono text-xs px-2 py-1.5 rounded-md outline-none text-center focus:border-accent"
               />
-              <span className="fp-sep">px</span>
+              <span className="font-mono text-xs text-ink-dim">px</span>
             </div>
           </section>
         </div>
       </main>
 
       {/* Mobile-only bottom nav — each tap opens that panel as a modal */}
-      <nav className="mobile-nav" aria-label="Panels">
-        <button
-          className={"mobile-nav-btn " + (mobileModal === "pattern" ? "on" : "")}
-          aria-pressed={mobileModal === "pattern"}
-          onClick={() => setMobileModal(mobileModal === "pattern" ? null : "pattern")}
-        >
-          <span className="mn-icon">▦</span>
-          <span className="mn-label">Pattern</span>
-        </button>
-        <button
-          className={"mobile-nav-btn " + (mobileModal === "sliders" ? "on" : "")}
-          aria-pressed={mobileModal === "sliders"}
-          onClick={() => setMobileModal(mobileModal === "sliders" ? null : "sliders")}
-        >
-          <span className="mn-icon">≡</span>
-          <span className="mn-label">Sliders</span>
-        </button>
-        <button
-          className={"mobile-nav-btn " + (mobileModal === "palette" ? "on" : "")}
-          aria-pressed={mobileModal === "palette"}
-          onClick={() => setMobileModal(mobileModal === "palette" ? null : "palette")}
-        >
-          <span className="mn-icon">◐</span>
-          <span className="mn-label">Palette</span>
-        </button>
-        <button
-          className={"mobile-nav-btn " + (mobileModal === "format" ? "on" : "")}
-          aria-pressed={mobileModal === "format"}
-          onClick={() => setMobileModal(mobileModal === "format" ? null : "format")}
-        >
-          <span className="mn-icon">⛶</span>
-          <span className="mn-label">Format</span>
-        </button>
+      <nav
+        aria-label="Panels"
+        className="hidden max-[940px]:flex fixed left-3 right-3 bottom-3 z-[70] bg-bg-2 border border-line rounded-2xl p-1.5 gap-1 shadow-[0_1px_0_rgba(255,255,255,0.05)_inset,0_20px_50px_rgba(0,0,0,0.55)]"
+        style={{ paddingBottom: `calc(0.375rem + env(safe-area-inset-bottom))` }}
+      >
+        {([
+          { id: "pattern", icon: "▦", label: "Pattern" },
+          { id: "sliders", icon: "≡", label: "Sliders" },
+          { id: "palette", icon: "◐", label: "Palette" },
+          { id: "format",  icon: "⛶", label: "Format" },
+        ] as const).map((tab) => (
+          <button
+            key={tab.id}
+            aria-pressed={mobileModal === tab.id}
+            onClick={() => setMobileModal(mobileModal === tab.id ? null : tab.id)}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-1 py-2.5 bg-transparent border-0 rounded-[10px] cursor-pointer transition-[background,color] duration-100 ${
+              mobileModal === tab.id ? "bg-accent text-white" : "text-ink-dim hover:text-ink hover:bg-bg-3"
+            }`}
+          >
+            <span className="text-lg leading-none">{tab.icon}</span>
+            <span className="font-ui text-[10px] font-semibold tracking-[0.3px]">{tab.label}</span>
+          </button>
+        ))}
       </nav>
 
       <div
