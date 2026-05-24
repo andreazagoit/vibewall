@@ -246,16 +246,19 @@ function ExportModal({
 
 export default function Vibewall() {
   const [patternKey, setPatternKey] = useState("topo");
-  const [paletteIdx, setPaletteIdx] = useState(0);
+  const [paletteMode, setPaletteMode] = useState<"presets" | "custom">("presets");
+  const [presetIdx, setPresetIdx] = useState(0);
   const [seed, setSeed] = useState(7);
   const [warp, setWarp] = useState(0.55);
   const [density, setDensity] = useState(0.5);
   const [extrasMap, setExtrasMap] = useState<Record<string, Extras>>({});
-  const [invert, setInvert] = useState(false);
   const [format, setFormat] = useState<Format>(FORMATS[0]);
   const [exportOpen, setExportOpen] = useState(false);
   const [customC1, setCustomC1] = useState("#ff4a1a");
   const [customC2, setCustomC2] = useState("#ff2d95");
+  // Mobile-only state: which panel is open as a modal (null = none).
+  // Gated by CSS @media — desktop ignores this entirely.
+  const [mobileModal, setMobileModal] = useState<null | "pattern" | "sliders" | "palette" | "format">(null);
 
   // Derive extras from patternKey defaults — user overrides per-pattern in extrasMap.
   const extras: Extras = useMemo(() => {
@@ -286,18 +289,13 @@ export default function Vibewall() {
     [customC1, customC2],
   );
 
-  const basePalette = paletteIdx === -1 ? customPalette : PALETTES[paletteIdx];
-  const palette: Palette = useMemo(() => {
-    if (!invert) return basePalette;
-    const c = [...basePalette.colors];
-    [c[0], c[1]] = [c[1], c[0]];
-    return { ...basePalette, colors: c };
-  }, [basePalette, invert]);
+  const palette: Palette = paletteMode === "custom" ? customPalette : PALETTES[presetIdx];
 
   const randomize = useCallback(() => {
     const rng = mulberry32(Date.now() & 0xffffffff);
     setSeed(Math.floor(rng() * 9999));
-    setPaletteIdx(Math.floor(rng() * PALETTES.length));
+    setPaletteMode("presets");
+    setPresetIdx(Math.floor(rng() * PALETTES.length));
     setPatternKey(PATTERN_KEYS[Math.floor(rng() * PATTERN_KEYS.length)]);
     setWarp(0.3 + rng() * 0.6);
     setDensity(0.3 + rng() * 0.5);
@@ -379,67 +377,18 @@ export default function Vibewall() {
       </header>
 
       <main className="grid">
-        <section className="panel">
-          <h2>Pattern</h2>
-          <div className="thumbs">
-            {PATTERN_KEYS.map((k) => (
-              <PatternThumb
-                key={k}
-                patternKey={k}
-                palette={palette}
-                active={k === patternKey}
-                onClick={() => setPatternKey(k)}
-              />
-            ))}
-          </div>
-
-          <h2 style={{ marginTop: 24 }}>Sliders</h2>
-          <Slider label="Warp" value={warp} onChange={setWarp} />
-          <Slider label="Density" value={density} onChange={setDensity} />
-
-          {(PATTERNS[patternKey].params || []).map((p) => (
-            <Slider
-              key={p.id as string}
-              label={p.label}
-              value={(extras as Record<string, number>)[p.id as string] ?? p.default}
-              min={p.min}
-              max={p.max}
-              step={p.step || 0.01}
-              format={p.format}
-              onChange={(v) => setExtra(p.id as string, v)}
-            />
-          ))}
-
-          <div className="toggle-row">
-            <button
-              className={"btn ghost tiny full " + (invert ? "on" : "")}
-              onClick={() => setInvert((v) => !v)}
-            >
-              {invert ? "● Invert: ON" : "○ Invert colors"}
-            </button>
-          </div>
-
-          <div className="seed-row">
-            <span className="seed-label">Seed</span>
-            <input
-              type="number" value={seed}
-              onChange={(e) => setSeed(parseInt(e.target.value) || 0)}
-              className="seed-input"
-            />
-            <button className="btn ghost tiny" onClick={reseed}>↻</button>
-          </div>
-        </section>
-
         <section className="stage">
-          <Preview
-            patternKey={patternKey}
-            palette={palette}
-            seed={seed}
-            warp={warp}
-            density={density}
-            format={format}
-            extras={extras}
-          />
+          <div className="preview-wrapper">
+            <Preview
+              patternKey={patternKey}
+              palette={palette}
+              seed={seed}
+              warp={warp}
+              density={density}
+              format={format}
+              extras={extras}
+            />
+          </div>
           <div className="stage-caption">
             <span>{PATTERNS[patternKey].label}</span>
             <span className="dot">·</span>
@@ -451,50 +400,219 @@ export default function Vibewall() {
           </div>
         </section>
 
-        <section className="panel">
-          <h2>Palette</h2>
-          <div className="palettes">
-            {PALETTES.map((p, i) => (
-              <button
-                key={p.id}
-                className={"swatch " + (i === paletteIdx ? "active" : "")}
-                onClick={() => setPaletteIdx(i)}
-                title={p.name}
-              >
-                <span style={{ background: p.colors[0] }} />
-                <span style={{ background: p.colors[1] }} />
-                <span className="swatch-name">{p.name}</span>
-              </button>
-            ))}
-            <button
-              className={"swatch swatch-custom " + (paletteIdx === -1 ? "active" : "")}
-              onClick={() => setPaletteIdx(-1)}
-              title="Custom"
-            >
-              <span style={{ background: customPalette.colors[0] }} />
-              <span style={{ background: customPalette.colors[1] }} />
-              <span className="swatch-name">+ Custom</span>
-            </button>
-          </div>
+        {/* Controls wrapper. `display: contents` on desktop so children land in
+            the .grid columns. On mobile each <section> becomes a modal opened
+            from the bottom nav. */}
+        <div className="controls" data-mobile-modal={mobileModal ?? ""}>
+          {/* Mobile-only modal backdrop — tap to close */}
+          <div
+            className="mobile-backdrop"
+            onClick={() => setMobileModal(null)}
+            aria-hidden="true"
+          />
 
-          {paletteIdx === -1 && (
-            <div className="custom-pickers">
-              <ColorPicker label="Primary"    value={customC1} onChange={setCustomC1} />
-              <ColorPicker label="Background" value={customC2} onChange={setCustomC2} />
-              <button
-                className="btn ghost tiny full"
-                onClick={() => {
-                  const p = PALETTES[Math.floor(Math.random() * PALETTES.length)];
-                  setCustomC1(p.colors[0]);
-                  setCustomC2(p.colors[1]);
-                }}
-              >
-                ↻ Copy random preset
-              </button>
+          <section className="panel" data-panel="pattern">
+            <div className="panel-head">
+              <h2>Pattern</h2>
             </div>
-          )}
-        </section>
+            <div className="thumbs">
+              {PATTERN_KEYS.map((k) => (
+                <PatternThumb
+                  key={k}
+                  patternKey={k}
+                  palette={palette}
+                  active={k === patternKey}
+                  onClick={() => setPatternKey(k)}
+                />
+              ))}
+            </div>
+          </section>
+
+          <section className="panel" data-panel="sliders">
+            <div className="panel-head">
+              <h2>Sliders</h2>
+            </div>
+            <Slider label="Warp" value={warp} onChange={setWarp} />
+            <Slider label="Density" value={density} onChange={setDensity} />
+
+            {(PATTERNS[patternKey].params || []).map((p) => (
+              <Slider
+                key={p.id as string}
+                label={p.label}
+                value={(extras as Record<string, number>)[p.id as string] ?? p.default}
+                min={p.min}
+                max={p.max}
+                step={p.step || 0.01}
+                format={p.format}
+                onChange={(v) => setExtra(p.id as string, v)}
+              />
+            ))}
+
+            <div className="seed-row">
+              <span className="seed-label">Seed</span>
+              <input
+                type="number" value={seed}
+                onChange={(e) => setSeed(parseInt(e.target.value) || 0)}
+                className="seed-input"
+              />
+              <button className="btn ghost tiny" onClick={reseed}>↻</button>
+            </div>
+          </section>
+
+          <section className="panel" data-panel="palette">
+            <div className="panel-head">
+              <h2>Palette</h2>
+              <div className="seg" role="tablist">
+                <button
+                  role="tab"
+                  aria-selected={paletteMode === "presets"}
+                  className={"seg-btn " + (paletteMode === "presets" ? "on" : "")}
+                  onClick={() => setPaletteMode("presets")}
+                >
+                  Presets
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={paletteMode === "custom"}
+                  className={"seg-btn " + (paletteMode === "custom" ? "on" : "")}
+                  onClick={() => setPaletteMode("custom")}
+                >
+                  Custom
+                </button>
+              </div>
+            </div>
+
+            {paletteMode === "presets" ? (
+              <div className="palettes">
+                {PALETTES.map((p, i) => (
+                  <button
+                    key={p.id}
+                    className={"swatch " + (i === presetIdx ? "active" : "")}
+                    onClick={() => setPresetIdx(i)}
+                    title={p.name}
+                  >
+                    <div className="swatch-colors">
+                      <span style={{ background: p.colors[0] }} />
+                      <span style={{ background: p.colors[1] }} />
+                    </div>
+                    <span className="swatch-name">{p.name}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="custom-pickers">
+                <div className="custom-preview">
+                  <span style={{ background: customPalette.colors[0] }} />
+                  <span style={{ background: customPalette.colors[1] }} />
+                </div>
+                <ColorPicker label="Primary"    value={customC1} onChange={setCustomC1} />
+                <ColorPicker label="Background" value={customC2} onChange={setCustomC2} />
+                <button
+                  className="btn ghost tiny full"
+                  onClick={() => {
+                    const a = customC1, b = customC2;
+                    setCustomC1(b);
+                    setCustomC2(a);
+                  }}
+                >
+                  ⇄ Invert colors
+                </button>
+              </div>
+            )}
+          </section>
+
+          {/* Mobile-only: format tab — render the size options inline (no dropdown). */}
+          <section className="panel mobile-only-panel" data-panel="format">
+            <div className="panel-head">
+              <h2>Format</h2>
+            </div>
+            <div className="fp-grid mobile-fp-grid">
+              {FORMATS.map((f) => (
+                <button
+                  key={f.id}
+                  className={"fp-item " + (format.id === f.id ? "active" : "")}
+                  onClick={() => setFormat(f)}
+                >
+                  <div className="fp-shape-wrap">
+                    <div className="fp-shape" style={{ aspectRatio: f.w + " / " + f.h }} />
+                  </div>
+                  <div className="fp-item-meta">
+                    <span className="fp-item-name">{f.name}</span>
+                    <span className="fp-item-dims">{f.w} × {f.h}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className={"fp-custom-row " + (format.id === "custom" ? "active" : "")}>
+              <span className="fp-custom-tag">Custom</span>
+              <input
+                type="number" min={64} max={8000} step={1}
+                value={format.id === "custom" ? format.w : 1080}
+                onChange={(e) => {
+                  const n = Math.max(64, Math.min(8000, parseInt(e.target.value) || 0));
+                  setFormat({
+                    id: "custom",
+                    name: "Custom",
+                    w: n,
+                    h: format.id === "custom" ? format.h : 1920,
+                  });
+                }}
+              />
+              <span className="fp-sep">×</span>
+              <input
+                type="number" min={64} max={8000} step={1}
+                value={format.id === "custom" ? format.h : 1920}
+                onChange={(e) => {
+                  const n = Math.max(64, Math.min(8000, parseInt(e.target.value) || 0));
+                  setFormat({
+                    id: "custom",
+                    name: "Custom",
+                    w: format.id === "custom" ? format.w : 1080,
+                    h: n,
+                  });
+                }}
+              />
+              <span className="fp-sep">px</span>
+            </div>
+          </section>
+        </div>
       </main>
+
+      {/* Mobile-only bottom nav — each tap opens that panel as a modal */}
+      <nav className="mobile-nav" aria-label="Panels">
+        <button
+          className={"mobile-nav-btn " + (mobileModal === "pattern" ? "on" : "")}
+          aria-pressed={mobileModal === "pattern"}
+          onClick={() => setMobileModal(mobileModal === "pattern" ? null : "pattern")}
+        >
+          <span className="mn-icon">▦</span>
+          <span className="mn-label">Pattern</span>
+        </button>
+        <button
+          className={"mobile-nav-btn " + (mobileModal === "sliders" ? "on" : "")}
+          aria-pressed={mobileModal === "sliders"}
+          onClick={() => setMobileModal(mobileModal === "sliders" ? null : "sliders")}
+        >
+          <span className="mn-icon">≡</span>
+          <span className="mn-label">Sliders</span>
+        </button>
+        <button
+          className={"mobile-nav-btn " + (mobileModal === "palette" ? "on" : "")}
+          aria-pressed={mobileModal === "palette"}
+          onClick={() => setMobileModal(mobileModal === "palette" ? null : "palette")}
+        >
+          <span className="mn-icon">◐</span>
+          <span className="mn-label">Palette</span>
+        </button>
+        <button
+          className={"mobile-nav-btn " + (mobileModal === "format" ? "on" : "")}
+          aria-pressed={mobileModal === "format"}
+          onClick={() => setMobileModal(mobileModal === "format" ? null : "format")}
+        >
+          <span className="mn-icon">⛶</span>
+          <span className="mn-label">Format</span>
+        </button>
+      </nav>
 
       <div
         id="export-stage"
